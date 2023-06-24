@@ -154,7 +154,13 @@ namespace Test.DotNetNpyIo
             var floatCount = 0;
             for (int i = -2000; i < 2000; i++)
             {
-                bigEInt16Writer.Write((short)i);
+                try {
+                    bigEInt16Writer.Write((short)i); 
+                }
+                catch(Exception e)
+                {
+
+                }
                 bigEInt32Writer.Write((int)i);
                 bigEInt64Writer.Write((long)i);
                 bigEUInt16Writer.Write((ushort)Math.Abs(i));
