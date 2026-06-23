@@ -351,44 +351,21 @@
 
         public unsafe void WriteIbm(float value)
         {
-            int fconv;
-            int fmant;
-            int t;
-            fconv = *(int*)&value;
-            if (fconv != 0)
-            {
-                fmant = (0x007fffff & fconv) | 0x00800000;
-                t = ((0x7f800000 & fconv) >> 23) - 126;
-                while ((t & 0x3) != 0) { ++t; fmant >>= 1; }
-                fconv = (int)(0x80000000 & fconv) | (((t >> 2) + 64) << 24) | fmant;
-            }
-            fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);                // Endianess conversion
-            var to = fconv;
-            base.Write(to);
+            // IEEE -> IBM bits, then reverse to big-endian on the wire.
+            int fconv = System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(IbmFloat.IeeeBitsToIbmBits(*(int*)&value));
+            base.Write(fconv);
         }
 
         public unsafe void WriteIbm(float[] values)
         {
             int n = values.Length;
-            int fconv;
-            int fmant;
-            int i;
-            int t;
             fixed (float* pbuffer = values)
             {
-                for (i = 0; i < n; ++i)
+                for (int i = 0; i < n; ++i)
                 {
-                    int iByte = i * 4;
-                    fconv = *(int*)&pbuffer[i];
-                    if (fconv != 0)
-                    {
-                        fmant = (0x007fffff & fconv) | 0x00800000;
-                        t = ((0x7f800000 & fconv) >> 23) - 126;
-                        while ((t & 0x3) != 0) { ++t; fmant >>= 1; }
-                        fconv = (int)(0x80000000 & fconv) | (((t >> 2) + 64) << 24) | fmant;
-                    }
-                    fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);         // Endianess conversion
+                    int fconv = System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(IbmFloat.IeeeBitsToIbmBits(*(int*)&pbuffer[i]));
                     var bytes = (byte*)&fconv;
+                    int iByte = i * 4;
                     buffer[iByte + 0] = bytes[0];
                     buffer[iByte + 1] = bytes[1];
                     buffer[iByte + 2] = bytes[2];

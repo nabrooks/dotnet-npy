@@ -34,7 +34,15 @@
       "Bash(tee /tmp/one.txt)",
       "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~ToDoubles_HonoursByteStartIndex|FullyQualifiedName~ToSingles_HonoursByteStartIndex|FullyQualifiedName~IbmSingle_Operators_DoNotStackOverflow|FullyQualifiedName~BigArray_Resize_PreservesData\")",
       "Bash(pkill -9 -f \"datacollector\")",
-      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~IbmSingle_Operators_DoNotStackOverflow\")"
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~IbmSingle_Operators_DoNotStackOverflow\")",
+      "Bash(git check-ignore *)",
+      "Bash(git checkout *)",
+      "Bash(git merge --no-ff fix/comprehensive-review -m 'Merge comprehensive review fixes and modern-API improvements *)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~RegressionTests|FullyQualifiedName~SerializationTests\")",
+      "Bash(git config *)",
+      "Bash(git commit -q -m 'Follow-up: FloatSerializer offset fix, IBM ctor hang guard, remove dead reader *)",
+      "Bash(gh auth *)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~SerializationTests|FullyQualifiedName~RegressionTests\")"
     ]
   }
 }

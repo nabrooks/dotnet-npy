@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 
 namespace DotNetNpyIo
 {
@@ -8,32 +9,12 @@ namespace DotNetNpyIo
         {
             int n = fromFloats.Length;
             fixed (float* fromFloatsPtr = fromFloats)
+            fixed (float* toFloatsPtr = toFloats)
             {
-                fixed (float* toFloatsPtr = toFloats)
-                {
-                    var from = (int*)fromFloatsPtr;
-                    var to = (int*)toFloatsPtr;
-
-                    int fconv;
-                    int fmant;
-                    int i;
-                    int t;
-                    for (i = 0; i < n; ++i)
-                    {
-                        fconv = from[i];
-                        fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);
-                        if (fconv != 0)
-                        {
-                            fmant = 0x00ffffff & fconv;
-                            t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                            while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                            if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                            else if (t <= 0) fconv = 0;
-                            else fconv = unchecked((int)(0x80000000 & fconv)) | (t << 23) | (0x007fffff & fmant);
-                        }
-                        to[i] = fconv;
-                    }
-                }
+                var from = (int*)fromFloatsPtr;
+                var to = (int*)toFloatsPtr;
+                for (int i = 0; i < n; ++i)
+                    to[i] = IbmFloat.IbmBitsToIeeeBits(BinaryPrimitives.ReverseEndianness(from[i]));
             }
         }
 
@@ -42,33 +23,11 @@ namespace DotNetNpyIo
             float[] result = new float[singlesCount];
             Buffer.BlockCopy(fromBytes, startIndex, result, 0, singlesCount * 4);
 
-            fixed (float* fromFloatsPtr = result)
+            fixed (float* floatsPtr = result)
             {
-                fixed (float* toFloatsPtr = result)
-                {
-                    var from = (int*)fromFloatsPtr;
-                    var to = (int*)toFloatsPtr;
-
-                    int fconv;
-                    int fmant;
-                    int i;
-                    int t;
-                    for (i = 0; i < singlesCount; ++i)
-                    {
-                        fconv = from[i];
-                        fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);
-                        if (fconv != 0)
-                        {
-                            fmant = 0x00ffffff & fconv;
-                            t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                            while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                            if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                            else if (t <= 0) fconv = 0;
-                            else fconv = unchecked((int)(0x80000000 & fconv)) | (t << 23) | (0x007fffff & fmant);
-                        }
-                        to[i] = fconv;
-                    }
-                }
+                var p = (int*)floatsPtr;
+                for (int i = 0; i < singlesCount; ++i)
+                    p[i] = IbmFloat.IbmBitsToIeeeBits(BinaryPrimitives.ReverseEndianness(p[i]));
             }
             return result;
         }
@@ -85,38 +44,13 @@ namespace DotNetNpyIo
 
         public override float Int32BitsToSingle(int value)
         {
-            int fmant;
-            int t;
-            int fconv = value;
-            fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);
-            if (fconv != 0)
-            {
-                fmant = 0x00ffffff & fconv;
-                t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                else if (t <= 0) fconv = 0;
-                else fconv = unchecked((int)(0x80000000 & fconv)) | (t << 23) | (0x007fffff & fmant);
-            }
-            int to = fconv;
+            int to = IbmFloat.IbmBitsToIeeeBits(BinaryPrimitives.ReverseEndianness(value));
             return new Int32SingleUnion(to).AsSingle;
         }
 
         public override int SingleToInt32Bits(float value)
         {
-            int fmant;
-            int t;
-            int fconv = new Int32SingleUnion(value).AsInt32;
-            if (fconv != 0)
-            {
-                fmant = (0x007fffff & fconv) | 0x00800000;
-                t = ((0x7f800000 & fconv) >> 23) - 126;
-                while ((t & 0x3) != 0) { ++t; fmant >>= 1; }
-                fconv = (int)(0x80000000 & fconv) | (((t >> 2) + 64) << 24) | fmant;
-            }
-            fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);
-            int to = fconv;
-            return to;
+            return BinaryPrimitives.ReverseEndianness(IbmFloat.IeeeBitsToIbmBits(new Int32SingleUnion(value).AsInt32));
         }
 
 

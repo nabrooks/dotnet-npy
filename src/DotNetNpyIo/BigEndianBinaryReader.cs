@@ -621,19 +621,7 @@ namespace DotNetNpyIo
             BaseStream.Read(buffer, 0, 4);
             fixed (byte* bptr = buffer)
             {
-                int fmant;
-                int t;
-                int fconv = ((int*)bptr)[0];
-                fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);   // reordering bytes to accomodate big endian initial encoding. (WAAAY faster than array indexing to reorder)
-                if (fconv != 0)
-                {
-                    fmant = 0x00ffffff & fconv;
-                    t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                    while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                    if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                    else if (t <= 0) fconv = 0;
-                    else fconv = (int)(0x80000000 & fconv) | (t << 23) | (0x007fffff & fmant);
-                }
+                int fconv = IbmFloat.IbmBitsToIeeeBits(System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(((int*)bptr)[0]));
                 return *(float*)&fconv;
             }
         }
@@ -647,22 +635,9 @@ namespace DotNetNpyIo
             fixed (byte* bptr = buffer)
             {
                 float[] copy = new float[count];
-                int fmant;
-                int t;
-                int fconv;
                 for (int i = 0; i < count; i++)
                 {
-                    fconv = ((int*)bptr)[i];
-                    fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);   // reordering bytes to accomodate big endian initial encoding. (WAAAY faster than array indexing to reorder)
-                    if (fconv != 0)
-                    {
-                        fmant = 0x00ffffff & fconv;
-                        t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                        while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                        if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                        else if (t <= 0) fconv = 0;
-                        else fconv = (int)(0x80000000 & fconv) | (t << 23) | (0x007fffff & fmant);
-                    }
+                    int fconv = IbmFloat.IbmBitsToIeeeBits(System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(((int*)bptr)[i]));
                     copy[i] = *(float*)&fconv;
                 }
                 return copy;

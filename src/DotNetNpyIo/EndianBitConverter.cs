@@ -175,42 +175,6 @@ namespace DotNetNpyIo
             return result;
         }
 
-        public unsafe byte[] T(float[] values)
-        {
-            fixed (float* frm = values)
-            {
-                int rawBits = *(int*)&frm[0];
-                byte[] bytes = new byte[4];
-                fixed (byte* b = bytes)
-                    *((int*)b) = rawBits;
-                return bytes;
-            }
-        }
-
-        private static unsafe void ibm_to_float(int* from, int* to, int n)
-        {
-            int fconv;
-            int fmant;
-            int i;
-            int t;
-            for (i = 0; i < n; ++i)
-            {
-                fconv = from[i];
-                fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);
-                if (fconv != 0)
-                {
-                    fmant = 0x00ffffff & fconv;
-                    t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                    while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                    if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                    else if (t <= 0) fconv = 0;
-                    else fconv = unchecked((int)(0x80000000 & fconv)) | (t << 23) | (0x007fffff & fmant);
-                }
-                to[i] = fconv;
-            }
-            return;
-        }
-
         /// <summary>
         /// Returns a 16-bit signed integer converted from two bytes at a specified position in a byte array.
         /// </summary>
