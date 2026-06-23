@@ -46,7 +46,9 @@
                 base.Write((ulong)(object)value);
 
             else if (tType == typeof(Half))
-                Write((Half)(object)value);
+                // Use base.Write (unambiguous) — calling Write(Half) here would re-bind to
+                // this generic method and recurse infinitely. Half bits written raw (LE host).
+                base.Write(BitConverter.HalfToInt16Bits((Half)(object)value));
             else if (tType == typeof(float))
                 base.Write((float)(object)value);
             else if (tType == typeof(double))

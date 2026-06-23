@@ -110,7 +110,7 @@ namespace DotNetNpyIo
         /// </summary>
         public static ushort ToUInt16(byte[] value, int startIndex)
         {
-            return BitConverter.ToUInt16(new byte[] { value[startIndex + 1], 0 }, 0);
+            return BitConverter.ToUInt16(new byte[] { value[startIndex + 1], value[startIndex] }, 0);
         }
 
         /// <summary>

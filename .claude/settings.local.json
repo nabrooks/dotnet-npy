@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet --version)",
+      "Bash(timeout 180 dotnet build DotNetNpyIo/DotNetNpyIo.csproj -c Release)",
+      "Bash(timeout 200 dotnet build Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release)",
+      "Bash(timeout 400 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~CreateByteFile|FullyQualifiedName~CreateWriteSequentialReadSequential3DInt32|FullyQualifiedName~CreateWriteSequentialReadSequential4DFloat|FullyQualifiedName~CreateWriteSequentialRead2DSliceFrom3DFloat|FullyQualifiedName~CreateWriteSequentialReadRange3DDouble\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 400 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~CreateByteFile|FullyQualifiedName~CreateWriteSequentialReadSequential3DInt32|FullyQualifiedName~CreateWriteSequentialReadSequential4DFloat|FullyQualifiedName~CreateWriteSequentialRead2DSliceFrom3DFloat|FullyQualifiedName~CreateWriteSequentialReadRange3DDouble\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 300 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~SerializationTests\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 200 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~SerializationTests\")",
+      "Read(//tmp/sorepro/**)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 150 dotnet run -c Release)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 540 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~CreateWriteSequentialReadSequential2DFloat|FullyQualifiedName~CreateWriteSequentialReadSequential3DInt32|FullyQualifiedName~CreateWriteSequentialReadSequential3DFloat|FullyQualifiedName~CreateWriteSequentialReadSequential4DFloat|FullyQualifiedName~CreateWriteSequentialReadSequential5DDouble|FullyQualifiedName~CreateWriteSequentialReadRange3DDouble|FullyQualifiedName~CreateWriteSequentialRead2DSliceFrom3DFloat|FullyQualifiedName~CreateWriteSequentialRead2DSliceFrom3DDouble|FullyQualifiedName~CreateByteFile\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 200 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~ReadSequential2DFloat\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 120 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName=Test.DotNetNpyIo.NpyFileMemmapTests.ReadSequential2DFloat\")",
+      "Bash(timeout 200 dotnet build DotNetNpyIo.sln -c Release)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 300 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~RegressionTests\")",
+      "Bash(rm -f /tmp/reg.trx)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 300 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~RegressionTests\" --logger \"trx;LogFileName=/tmp/reg.trx\")",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(pkill -f testhost)",
+      "Bash(pkill -f vstest)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 540 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~RegressionTests\" --logger \"trx;LogFileName=/tmp/reg.trx\")",
+      "Bash(echo \"DOTNET_EXIT=$?\")",
+      "Bash(pkill -9 -f testhost)",
+      "Bash(pkill -9 -f vstest)",
+      "Bash(pkill -9 -f \"dotnet test\")",
+      "Bash(rm -f /tmp/fast.trx)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor timeout 240 dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~ToDoubles_HonoursByteStartIndex|FullyQualifiedName~ToSingles_HonoursByteStartIndex|FullyQualifiedName~IbmSingle_Operators|FullyQualifiedName~BigArray_Resize\" --logger \"trx;LogFileName=/tmp/fast.trx\")",
+      "Bash(echo \"REAL_EXIT=$?\")",
+      "Bash(pkill -9 -f \"dotnet exec\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~RegressionTests\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~RegressionTests.ToDoubles_HonoursByteStartIndex\")",
+      "Bash(tee /tmp/one.txt)",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~ToDoubles_HonoursByteStartIndex|FullyQualifiedName~ToSingles_HonoursByteStartIndex|FullyQualifiedName~IbmSingle_Operators_DoNotStackOverflow|FullyQualifiedName~BigArray_Resize_PreservesData\")",
+      "Bash(pkill -9 -f \"datacollector\")",
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~IbmSingle_Operators_DoNotStackOverflow\")"
+    ]
+  }
+}

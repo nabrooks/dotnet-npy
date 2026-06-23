@@ -1214,8 +1214,8 @@ namespace DotNetNpyIo
 
             TextReader strReader = new StreamReader(fileStream);
             char[] charBuffer = new char[headerLength];
-            strReader.Read(charBuffer, 0, headerLength);
-            if (charBuffer.Length != headerLength)
+            var charsRead = strReader.ReadBlock(charBuffer, 0, headerLength);
+            if (charsRead != headerLength)
                 throw new Exception("Numpy header parse failed on stream read bytes");
 
             //var str = new string(charBuffer);
@@ -1249,7 +1249,8 @@ namespace DotNetNpyIo
             // shape
             loc1 = Array.IndexOf(charBuffer, '(');
             loc2 = Array.IndexOf(charBuffer, ')');
-            var r = new string(charBuffer).Substring(loc1 + 1, loc2 - loc1 - 1).Split(',');
+            var r = new string(charBuffer).Substring(loc1 + 1, loc2 - loc1 - 1)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var dimensionality = r.Length;
             var dimensionSizes = r.Select(s => int.Parse(s)).ToArray();
 
@@ -1286,34 +1287,21 @@ namespace DotNetNpyIo
             if (Validate<T>() == false)
                 throw new ArgumentException($"Type {typeof(T)} is not supported as a numpy file type");
 
-            byte majorVersion = 1;
-            byte minorVersion = 0;
-            var headerLengthBytes = BitConverter.GetBytes((ushort)118);
-            var fortranOrderString = isFortranOrder ? "True" : "False";
-            // "{'descr': '<f4', 'fortran_order': False, 'shape': (16, 23, 15), }                                                    \n";
-            var header = "{'descr': '";
-            header = isLittleEndian ? header + "<" + GetTypeString(typeof(T)) + "'" : header + ">" + GetTypeString(typeof(T)) + "'";
-            header = header + ", 'fortran_order': " + fortranOrderString + ", 'shape': (" + string.Join(", ", shape) + "), }";
-            header = header.PadRight(127 - 10);
-            header = new String(header.Append('\n').ToArray());
-
-            var headerBytes = Encoding.ASCII.GetBytes(header);
+            var headerBytes = BuildHeaderBytes(typeof(T), isLittleEndian, isFortranOrder, new long[] { shape });
 
             long totalSize = shape;
 
             var elementSize = Marshal.SizeOf<T>();
-            long totalByteCount = 128 + totalSize * elementSize;
+            long totalByteCount = headerBytes.Length + totalSize * elementSize;
 
             using (var fileStream = File.Create(fileInfo.FullName))
             {
-                fileStream.Write(MagicStringBytes);
-                fileStream.WriteByte(majorVersion);
-                fileStream.WriteByte(minorVersion);
-                fileStream.Write(headerLengthBytes);
-
                 fileStream.Write(headerBytes);
-                fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
-                fileStream.WriteByte(0);
+                if (totalByteCount > headerBytes.Length)
+                {
+                    fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
+                    fileStream.WriteByte(0);
+                }
             }
 
             return Open(fileInfo);
@@ -1336,40 +1324,48 @@ namespace DotNetNpyIo
             if (Validate<T>() == false)
                 throw new ArgumentException($"Type {typeof(T)} is not supported as a numpy file type");
 
-            byte majorVersion = 1;
-            byte minorVersion = 0;
-            var headerLengthBytes = BitConverter.GetBytes((ushort)118);
-            var fortranOrderString = isFortranOrder ? "True" : "False";
-            // "{'descr': '<f4', 'fortran_order': False, 'shape': (16, 23, 15), }                                                    \n";
-            var header = "{'descr': '";
-            header = isLittleEndian ? header + "<" + GetTypeString(typeof(T)) + "'" : header + ">" + GetTypeString(typeof(T)) + "'";
-            header = header + ", 'fortran_order': " + fortranOrderString + ", 'shape': (" + string.Join(", ", shape) + "), }";
-            header = header.PadRight(127 - 10);
-            header = new String(header.Append('\n').ToArray());
-
-            var headerBytes = Encoding.ASCII.GetBytes(header);
+            var headerBytes = BuildHeaderBytes(typeof(T), isLittleEndian, isFortranOrder, Array.ConvertAll(shape, s => (long)s));
 
             long totalSize = 1;
             for (int i = 0; i < shape.Length; i++)
                 totalSize *= shape[i];
 
             var elementSize = Marshal.SizeOf<T>();
-            long totalByteCount = 128 + totalSize * elementSize;
+            long totalByteCount = headerBytes.Length + totalSize * elementSize;
 
             using (var fileStream = File.Create(fileInfo.FullName))
             {
-                fileStream.Write(MagicStringBytes);
-                fileStream.WriteByte(majorVersion);
-                fileStream.WriteByte(minorVersion);
-                fileStream.Write(headerLengthBytes);
-
                 fileStream.Write(headerBytes);
-                fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
-                fileStream.WriteByte(0);
+                if (totalByteCount > headerBytes.Length)
+                {
+                    fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
+                    fileStream.WriteByte(0);
+                }
             }
 
             return Open(fileInfo);
         }
+
+        #region String-path convenience factories
+
+        /// <summary>
+        /// Opens a preexisting numpy file at the given path.
+        /// </summary>
+        public static NpyFileBuffered<T> Open(string path) => Open(new FileInfo(path));
+
+        /// <summary>
+        /// Creates a 1-D numpy file at the given path.
+        /// </summary>
+        public static NpyFileBuffered<T> Create(string path, long shape, bool isLittleEndian = true, bool isFortranOrder = false, bool overwrite = true)
+            => Create(new FileInfo(path), shape, isLittleEndian, isFortranOrder, overwrite);
+
+        /// <summary>
+        /// Creates an N-D numpy file at the given path.
+        /// </summary>
+        public static NpyFileBuffered<T> Create(string path, int[] shape, bool isLittleEndian = true, bool isFortranOrder = false, bool overwrite = true)
+            => Create(new FileInfo(path), shape, isLittleEndian, isFortranOrder, overwrite);
+
+        #endregion String-path convenience factories
 
         /// <summary>
         /// Tries to refill the buffer with samples near the coordinate input.

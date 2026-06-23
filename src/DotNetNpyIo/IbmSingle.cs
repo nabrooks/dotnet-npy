@@ -133,32 +133,32 @@ namespace DotNetNpyIo
 
         public static bool operator ==(IbmSingle left, IbmSingle right)
         {
-            return left == right;
+            return left.m_value == right.m_value;
         }
 
         public static bool operator !=(IbmSingle left, IbmSingle right)
         {
-            return left != right;
+            return left.m_value != right.m_value;
         }
 
         public static bool operator <(IbmSingle left, IbmSingle right)
         {
-            return left < right;
+            return left.m_value < right.m_value;
         }
 
         public static bool operator >(IbmSingle left, IbmSingle right)
         {
-            return left > right;
+            return left.m_value > right.m_value;
         }
 
         public static bool operator <=(IbmSingle left, IbmSingle right)
         {
-            return left <= right;
+            return left.m_value <= right.m_value;
         }
 
         public static bool operator >=(IbmSingle left, IbmSingle right)
         {
-            return left >= right;
+            return left.m_value >= right.m_value;
         }
 
         public override bool Equals(Object obj)

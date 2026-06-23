@@ -5,8 +5,6 @@ namespace DotNetNpyIo
 {
     internal static class EndianUtilities
     {
-        static UInt16HalfMap UshortHalfMap = new UInt16HalfMap();
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ushort Swap(ushort val)
         {
@@ -66,9 +64,10 @@ namespace DotNetNpyIo
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Half Swap(Half val)
         {
-            UshortHalfMap.Half = val;
-            UshortHalfMap.UInt16 = Swap(UshortHalfMap.UInt16);
-            return UshortHalfMap.Half;
+            // Use a local map so concurrent callers don't race on shared state.
+            UInt16HalfMap map = new UInt16HalfMap() { Half = val };
+            map.UInt16 = Swap(map.UInt16);
+            return map.Half;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -113,11 +112,11 @@ namespace DotNetNpyIo
             for (int i = 0; i <= 15; i += 4)
             {
                 //convert every 4 bytes into an int32
-                bits[i / 4] = BitConverter.ToInt32(bytesArray, i);
+                bits2[i / 4] = BitConverter.ToInt32(bytesArray, i);
             }
             //Use the decimal's new constructor to
             //create an instance of decimal
-            return new decimal(bits);
+            return new decimal(bits2);
         }
 
         [StructLayout(LayoutKind.Explicit)]

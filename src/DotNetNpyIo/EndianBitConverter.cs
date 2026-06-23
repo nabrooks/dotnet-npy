@@ -143,8 +143,8 @@ namespace DotNetNpyIo
         public virtual double[] ToDoubles(byte[] values, int startIndex, int doublesCount)
         {
             double[] result = new double[doublesCount];
-            for (int i = startIndex; i < doublesCount; i++)
-                result[i - startIndex] = Int64BitsToDouble(ToInt64(values, i * 8));
+            for (int i = 0; i < doublesCount; i++)
+                result[i] = Int64BitsToDouble(ToInt64(values, startIndex + i * 8));
             return result;
         }
 
@@ -170,8 +170,8 @@ namespace DotNetNpyIo
         public virtual float[] ToSingles(byte[] values, int startIndex, int singlesCount)
         {
             float[] result = new float[singlesCount];
-            for (int i = startIndex; i < singlesCount; i++)
-                result[i - startIndex] = Int32BitsToSingle(ToInt32(values, i * 4));
+            for (int i = 0; i < singlesCount; i++)
+                result[i] = Int32BitsToSingle(ToInt32(values, startIndex + i * 4));
             return result;
         }
 

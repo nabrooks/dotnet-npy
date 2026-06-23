@@ -173,6 +173,7 @@ namespace DotNetNpyIo
             if (type == typeof(bool)) return "?";
             else if (type == typeof(sbyte)) return "b";
             else if (type == typeof(byte)) return "B";
+            else if (type == typeof(Half)) return "f2";
             else if (type == typeof(float)) return "f4";
             else if (type == typeof(double)) return "f8";
             else if (type == typeof(short)) return "i2";
@@ -194,6 +195,7 @@ namespace DotNetNpyIo
             if (typeof(T) == typeof(bool)) return true;
             else if (typeof(T) == typeof(sbyte)) return true;
             else if (typeof(T) == typeof(byte)) return true;
+            else if (typeof(T) == typeof(Half)) return true;
             else if (typeof(T) == typeof(float)) return true;
             else if (typeof(T) == typeof(double)) return true;
             else if (typeof(T) == typeof(short)) return true;
@@ -216,5 +218,82 @@ namespace DotNetNpyIo
 
             }
         }
+
+        /// <summary>
+        /// Builds a numpy v1.0 file header (magic string, version, header length and the
+        /// padded header dictionary) for the given type/shape. The total header length is
+        /// padded to a multiple of 64 bytes and terminated with '\n' as required by the
+        /// .npy format specification. 1-D shapes are written with a trailing comma — e.g.
+        /// "(3,)" — to remain compatible with numpy.
+        /// </summary>
+        protected static byte[] BuildHeaderBytes(Type type, bool isLittleEndian, bool isFortranOrder, IReadOnlyList<long> shape)
+        {
+            string descr = (isLittleEndian ? "<" : ">") + GetTypeString(type);
+            string fortran = isFortranOrder ? "True" : "False";
+
+            string shapeStr;
+            if (shape.Count == 1)
+                shapeStr = "(" + shape[0] + ",)";
+            else
+                shapeStr = "(" + string.Join(", ", shape) + ")";
+
+            string dict = "{'descr': '" + descr + "', 'fortran_order': " + fortran + ", 'shape': " + shapeStr + ", }";
+
+            // magic(6) + version(2) + headerLen(2) + dict + '\n', padded so the total is a multiple of 64.
+            const int preamble = 10;
+            int unpadded = preamble + dict.Length + 1; // +1 for the trailing newline
+            int totalLen = ((unpadded + 63) / 64) * 64;
+            int padding = totalLen - unpadded;
+            dict = dict + new string(' ', padding) + "\n";
+
+            if (dict.Length > ushort.MaxValue)
+                throw new ArgumentException("Header is too large for the numpy v1.0 format; a v2.0 header would be required.");
+
+            ushort headerLen = (ushort)dict.Length;
+
+            byte[] result = new byte[preamble + headerLen];
+            Array.Copy(MagicStringBytes, result, MagicStringBytes.Length);
+            result[6] = 1; // major version
+            result[7] = 0; // minor version
+            result[8] = (byte)(headerLen & 0xff);        // header length, little-endian per spec
+            result[9] = (byte)((headerLen >> 8) & 0xff);
+            System.Text.Encoding.ASCII.GetBytes(dict, 0, dict.Length, result, preamble);
+            return result;
+        }
+
+        #region Strongly-typed convenience factories
+
+        /// <summary>
+        /// Opens an existing numpy file as a strongly-typed, zero-copy memory-mapped array, e.g.
+        /// <c>NpyFile.Open&lt;float&gt;("data.npy")</c>. The generic argument must match the file's dtype.
+        /// </summary>
+        public static NpyFileMemmap<T> Open<T>(string path) where T : unmanaged => NpyFileMemmap<T>.Open(path);
+
+        /// <inheritdoc cref="Open{T}(string)"/>
+        public static NpyFileMemmap<T> Open<T>(FileInfo fileInfo) where T : unmanaged => NpyFileMemmap<T>.Open(fileInfo);
+
+        /// <summary>
+        /// Opens an existing numpy file as a strongly-typed buffered array (honours the file's
+        /// byte order; suitable for big-endian files), e.g. <c>NpyFile.OpenBuffered&lt;float&gt;("data.npy")</c>.
+        /// </summary>
+        public static NpyFileBuffered<T> OpenBuffered<T>(string path) where T : unmanaged => NpyFileBuffered<T>.Open(path);
+
+        /// <inheritdoc cref="OpenBuffered{T}(string)"/>
+        public static NpyFileBuffered<T> OpenBuffered<T>(FileInfo fileInfo) where T : unmanaged => NpyFileBuffered<T>.Open(fileInfo);
+
+        /// <summary>
+        /// Creates a new memory-mapped numpy file, e.g. <c>NpyFile.Create&lt;float&gt;("data.npy", new[]{16, 32})</c>.
+        /// </summary>
+        public static NpyFileMemmap<T> Create<T>(string path, int[] shape, bool isLittleEndian = true, bool isFortranOrder = false, bool overwrite = true) where T : unmanaged
+            => NpyFileMemmap<T>.Create(path, shape, isLittleEndian, isFortranOrder, overwrite);
+
+        /// <summary>
+        /// Creates a new buffered numpy file (honours the requested byte order), e.g.
+        /// <c>NpyFile.CreateBuffered&lt;float&gt;("data.npy", new[]{16, 32}, isLittleEndian: false)</c>.
+        /// </summary>
+        public static NpyFileBuffered<T> CreateBuffered<T>(string path, int[] shape, bool isLittleEndian = true, bool isFortranOrder = false, bool overwrite = true) where T : unmanaged
+            => NpyFileBuffered<T>.Create(path, shape, isLittleEndian, isFortranOrder, overwrite);
+
+        #endregion Strongly-typed convenience factories
     }
 }

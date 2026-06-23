@@ -11,7 +11,9 @@
     /// </remarks>
     public abstract class Disposable : IDisposable
     {
-        private State _state;
+        // Stored as an int (not the enum) so the Active -> Disposing transition can be
+        // performed atomically with Interlocked, making Dispose() safe against concurrent calls.
+        private int _state = (int)State.Active;
 
         /// <summary>
         /// The different states of the disposable
@@ -39,7 +41,7 @@
         /// </summary>
         protected bool IsDisposed
         {
-            get { return _state == State.Disposed; }
+            get { return _state == (int)State.Disposed; }
         }
 
         /// <summary>
@@ -47,7 +49,7 @@
         /// </summary>
         protected bool IsDisposing
         {
-            get { return _state == State.Disposing; }
+            get { return _state == (int)State.Disposing; }
         }
 
         /// <inheritdoc />
@@ -64,23 +66,24 @@
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1063:ImplementIDisposableCorrectly", Justification = "This method is not meant to be overridden since the purpose of this base class is to ensure Dispose is done correctly.")]
         protected void Dispose(bool disposing)
         {
-            if (_state == State.Active)
+            // Atomically claim the Active -> Disposing transition. Only the thread that wins
+            // the race proceeds; concurrent or recursive callers observe a non-Active state
+            // and return immediately.
+            if (Interlocked.CompareExchange(ref _state, (int)State.Disposing, (int)State.Active) != (int)State.Active)
+                return;
+
+            try
             {
-                _state = State.Disposing; // only disposing at this stage so that subclasses can access members without throwing an ObjectDisposedException, yet we are protected from recursive Dispose calls.
-
-                try
+                if (disposing)
                 {
-                    if (disposing)
-                    {
-                        DisposeManagedResources();
-                    }
+                    DisposeManagedResources();
+                }
 
-                    DisposeUnmanagedResources();
-                }
-                finally
-                {
-                    _state = State.Disposed; // and now we are fully disposed
-                }
+                DisposeUnmanagedResources();
+            }
+            finally
+            {
+                _state = (int)State.Disposed; // and now we are fully disposed
             }
         }
 

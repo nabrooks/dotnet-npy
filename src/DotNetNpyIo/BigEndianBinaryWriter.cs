@@ -8,33 +8,37 @@
 
         public void Write<T>(T value)
         {
+            // NOTE: dispatch directly to the non-generic BinaryWriter overloads via 'base'
+            // (with the appropriate endian swap) rather than to this type's Write(short) etc.
+            // overloads. Calling the unqualified Write(...) here re-binds to this generic
+            // method (Write<T>) and recurses infinitely -> StackOverflow.
             var tType = typeof(T);
             if (tType == typeof(bool))
-                Write((bool)(object)value);
+                base.Write((bool)(object)value);
             else if (tType == typeof(byte))
-                Write((byte)(object)value);
+                base.Write((byte)(object)value);
             else if (tType == typeof(sbyte))
-                Write((sbyte)(object)value);
+                base.Write((sbyte)(object)value);
 
             else if (tType == typeof(short))
-                Write((short)(object)value);
+                base.Write(EndianUtilities.Swap((short)(object)value));
             else if (tType == typeof(ushort))
-                Write((ushort)(object)value);
+                base.Write(EndianUtilities.Swap((ushort)(object)value));
             else if (tType == typeof(int))
-                Write((int)(object)value);
+                base.Write(EndianUtilities.Swap((int)(object)value));
             else if (tType == typeof(uint))
-                Write((uint)(object)value);
+                base.Write(EndianUtilities.Swap((uint)(object)value));
             else if (tType == typeof(long))
-                Write((long)(object)value);
+                base.Write(EndianUtilities.Swap((long)(object)value));
             else if (tType == typeof(ulong))
-                Write((ulong)(object)value);
+                base.Write(EndianUtilities.Swap((ulong)(object)value));
 
             else if (tType == typeof(Half))
-                Write((Half)(object)value);
+                base.Write(EndianUtilities.Swap(BitConverter.HalfToInt16Bits((Half)(object)value)));
             else if (tType == typeof(float))
-                Write((float)(object)value);
+                base.Write(EndianUtilities.Swap((float)(object)value));
             else if (tType == typeof(double))
-                Write((double)(object)value);
+                base.Write(EndianUtilities.Swap((double)(object)value));
             else
                 throw new NotSupportedException($"Type {typeof(T)} not supported");
         }
@@ -303,7 +307,7 @@
             var byteCount = values.Length * 8;
             fixed (double* p = values)
             {
-                for (int i = 0; i < byteCount; i++)
+                for (int i = 0; i < values.Length; i++)
                 {
                     var r = *(long*)&p[i];
                     var bigEValue = EndianUtilities.Swap(r);

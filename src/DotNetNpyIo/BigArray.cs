@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Reflection;
 
 namespace DotNetNpyIo
@@ -182,6 +183,13 @@ namespace DotNetNpyIo
             if (newSize == Length)
                 return;
 
+            if (newSize == 0)
+            {
+                _data = new T[0][];
+                Length = 0;
+                return;
+            }
+
             int blockCount = (int)(newSize / _blockSize);
             if (newSize > (blockCount * _blockSize))
                 blockCount++;
@@ -189,7 +197,8 @@ namespace DotNetNpyIo
             int previousBlockCount = _data.Length;
 
             int lastBlockSize = (int)(newSize - ((blockCount - 1) * _blockSize));
-            int previousLastBlockSize = (int)(Length - ((blockCount - 1) * _blockSize));
+            // Size of the previous final block, computed against the PREVIOUS block count.
+            int previousLastBlockSize = (int)(Length - ((previousBlockCount - 1) * _blockSize));
 
             if (previousBlockCount != blockCount)
             {
@@ -203,7 +212,7 @@ namespace DotNetNpyIo
                     Array.Resize<T[]>(ref _data, blockCount);
                     for (int i = previousBlockCount; i < blockCount - 1; i++)
                     {
-                        _data[previousBlockCount] = new T[_blockSize];
+                        _data[i] = new T[_blockSize];
                     }
 
                     _data[blockCount - 1] = new T[lastBlockSize];
@@ -317,7 +326,9 @@ namespace DotNetNpyIo
             //NOTE: _blockSize is optimized for 64bit process.
             if (typeof(T).GetTypeInfo().IsValueType)
             {
-                int itemSize = Marshal.SizeOf(typeof(T));
+                // Unsafe.SizeOf<T> returns the managed size and (unlike Marshal.SizeOf) does not
+                // throw for value types that contain managed references or generic parameters.
+                int itemSize = Unsafe.SizeOf<T>();
                 _blockSize = (int.MaxValue - 56) / itemSize;
             }
             else

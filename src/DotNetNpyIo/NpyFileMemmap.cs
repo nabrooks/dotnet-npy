@@ -275,8 +275,8 @@ namespace DotNetNpyIo
         /// <returns></returns>
         public T this[int index]
         {
-            get { return *(T*)(memPtr + headerSize + (index * SizeOfType)); }
-            set { *(T*)(memPtr + headerSize + (index * SizeOfType)) = value; }
+            get { return this[(long)index]; }
+            set { this[(long)index] = value; }
         }
 
         /// <summary>
@@ -286,8 +286,18 @@ namespace DotNetNpyIo
         /// <returns></returns>
         public T this[long index]
         {
-            get { return *(T*)(memPtr + headerSize + (index * SizeOfType)); }
-            set { *(T*)(memPtr + headerSize + (index * SizeOfType)) = value; }
+            get
+            {
+                if (index < 0 || index >= SampleCount)
+                    throw new ArgumentOutOfRangeException(nameof(index), $"Index {index} is out of bounds [0, {SampleCount}).");
+                return *(T*)(memPtr + headerSize + (index * SizeOfType));
+            }
+            set
+            {
+                if (index < 0 || index >= SampleCount)
+                    throw new ArgumentOutOfRangeException(nameof(index), $"Index {index} is out of bounds [0, {SampleCount}).");
+                *(T*)(memPtr + headerSize + (index * SizeOfType)) = value;
+            }
         }
 
         #endregion System.Int32 and System.Int64 based index access
@@ -724,7 +734,7 @@ namespace DotNetNpyIo
                             }
                         }
                 else
-                    for (int k = 0; k < i_count; k++)
+                    for (int k = 0; k < k_count; k++)
                         for (int j = 0; j < j_count; j++)
                         {
                             var file_index = _ravel3D(i_0, j_0 + j, k_0 + k);
@@ -978,8 +988,8 @@ namespace DotNetNpyIo
 
             TextReader strReader = new StreamReader(fileStream);
             char[] charBuffer = new char[headerLength];
-            strReader.Read(charBuffer, 0, headerLength);
-            if (charBuffer.Length != headerLength)
+            var charsRead = strReader.ReadBlock(charBuffer, 0, headerLength);
+            if (charsRead != headerLength)
                 throw new Exception("Numpy header parse failed on stream read bytes");
 
             //var str = new string(charBuffer);
@@ -991,7 +1001,8 @@ namespace DotNetNpyIo
 
             var formattedHeaderStr = headerStr
                 .Replace("(", "[").Replace(")", "]").Replace("'", "\"")
-                .Replace("\n", "").Replace("False", "false").Replace("True", "true").Replace(" ", "").Replace(",}", "}").Trim();
+                .Replace("\n", "").Replace("False", "false").Replace("True", "true").Replace(" ", "")
+                .Replace(",]", "]").Replace(",}", "}").Trim();
             var npyHeader = JsonSerializer.Deserialize<NpyHeader>(formattedHeaderStr);
 
             // fortran_order
@@ -1056,34 +1067,21 @@ namespace DotNetNpyIo
             if (Validate<T>() == false)
                 throw new ArgumentException($"Type {typeof(T)} is not supported as a numpy file type");
 
-            byte majorVersion = 1;
-            byte minorVersion = 0;
-            var headerLengthBytes = BitConverter.GetBytes((ushort)118);
-            var fortranOrderString = isFortranOrder ? "True" : "False";
-            // "{'descr': '<f4', 'fortran_order': False, 'shape': (16, 23, 15), }                                                    \n";
-            var header = "{'descr': '";
-            header = isLittleEndian ? header + "<" + GetTypeString(typeof(T)) + "'" : header + ">" + GetTypeString(typeof(T)) + "'";
-            header = header + ", 'fortran_order': " + fortranOrderString + ", 'shape': (" + string.Join(", ", shape) + "), }";
-            header = header.PadRight(127 - 10);
-            header = new String(header.Append('\n').ToArray());
-
-            var headerBytes = Encoding.ASCII.GetBytes(header);
+            var headerBytes = BuildHeaderBytes(typeof(T), isLittleEndian, isFortranOrder, new long[] { shape });
 
             long totalSize = shape;
 
             var elementSize = Marshal.SizeOf<T>();
-            long totalByteCount = 128 + totalSize * elementSize;
+            long totalByteCount = headerBytes.Length + totalSize * elementSize;
 
             using (var fileStream = File.Create(fileInfo.FullName))
             {
-                fileStream.Write(MagicStringBytes);
-                fileStream.WriteByte(majorVersion);
-                fileStream.WriteByte(minorVersion);
-                fileStream.Write(headerLengthBytes);
-
                 fileStream.Write(headerBytes);
-                fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
-                fileStream.WriteByte(0);
+                if (totalByteCount > headerBytes.Length)
+                {
+                    fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
+                    fileStream.WriteByte(0);
+                }
             }
 
             return Open(fileInfo);
@@ -1106,40 +1104,89 @@ namespace DotNetNpyIo
             if (Validate<T>() == false)
                 throw new ArgumentException($"Type {typeof(T)} is not supported as a numpy file type");
 
-            byte majorVersion = 1;
-            byte minorVersion = 0;
-            var headerLengthBytes = BitConverter.GetBytes((ushort)118);
-            var fortranOrderString = isFortranOrder ? "True" : "False";
-            // "{'descr': '<f4', 'fortran_order': False, 'shape': (16, 23, 15), }                                                    \n";
-            var header = "{'descr': '";
-            header = isLittleEndian ? header + "<" + GetTypeString(typeof(T)) + "'" : header + ">" + GetTypeString(typeof(T)) + "'";
-            header = header + ", 'fortran_order': " + fortranOrderString + ", 'shape': (" + string.Join(", ", shape) + "), }";
-            header = header.PadRight(127 - 10);
-            header = new String(header.Append('\n').ToArray());
-
-            var headerBytes = Encoding.ASCII.GetBytes(header);
+            var headerBytes = BuildHeaderBytes(typeof(T), isLittleEndian, isFortranOrder, Array.ConvertAll(shape, s => (long)s));
 
             long totalSize = 1;
             for (int i = 0; i < shape.Length; i++)
                 totalSize *= shape[i];
 
             var elementSize = Marshal.SizeOf<T>();
-            long totalByteCount = 128 + totalSize * elementSize;
+            long totalByteCount = headerBytes.Length + totalSize * elementSize;
 
             using (var fileStream = File.Create(fileInfo.FullName))
             {
-                fileStream.Write(MagicStringBytes);
-                fileStream.WriteByte(majorVersion);
-                fileStream.WriteByte(minorVersion);
-                fileStream.Write(headerLengthBytes);
-
                 fileStream.Write(headerBytes);
-                fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
-                fileStream.WriteByte(0);
+                if (totalByteCount > headerBytes.Length)
+                {
+                    fileStream.Seek(totalByteCount - 1, SeekOrigin.Begin);
+                    fileStream.WriteByte(0);
+                }
             }
 
             return Open(fileInfo);
         }
+
+        #region Zero-copy Span access
+
+        /// <summary>
+        /// Returns a zero-copy <see cref="Span{T}"/> over the entire array, pointing directly at
+        /// the memory-mapped region. Mutating the span mutates the file. Only valid while this
+        /// instance is not disposed.
+        /// NOTE: the data is interpreted in the host's native byte order. Zero-copy spans are only
+        /// meaningful for native-endian (little-endian on most platforms) files; for byte-swapped
+        /// files use the copying indexers, or <see cref="NpyFileBuffered{T}"/>.
+        /// </summary>
+        public Span<T> AsSpan()
+        {
+            if (SampleCount > int.MaxValue)
+                throw new InvalidOperationException($"Array has {SampleCount} elements which exceeds Span<T>'s maximum length; use AsSpan(long start, int length) to view a window.");
+            return new Span<T>(memPtr + headerSize, (int)SampleCount);
+        }
+
+        /// <summary>
+        /// Returns a zero-copy <see cref="Span{T}"/> over a contiguous run of <paramref name="length"/>
+        /// elements beginning at flattened index <paramref name="start"/>, pointing directly at the
+        /// memory-mapped region. Mutating the span mutates the file.
+        /// </summary>
+        public Span<T> AsSpan(long start, int length)
+        {
+            if (start < 0 || length < 0 || start + length > SampleCount)
+                throw new ArgumentOutOfRangeException(nameof(start), $"Window [{start}, {start + length}) is out of bounds [0, {SampleCount}).");
+            return new Span<T>(memPtr + headerSize + (start * SizeOfType), length);
+        }
+
+        /// <summary>
+        /// Zero-copy <see cref="ReadOnlySpan{T}"/> over the entire array. See <see cref="AsSpan()"/>.
+        /// </summary>
+        public ReadOnlySpan<T> AsReadOnlySpan() => AsSpan();
+
+        /// <summary>
+        /// Zero-copy <see cref="ReadOnlySpan{T}"/> over a window. See <see cref="AsSpan(long, int)"/>.
+        /// </summary>
+        public ReadOnlySpan<T> AsReadOnlySpan(long start, int length) => AsSpan(start, length);
+
+        #endregion Zero-copy Span access
+
+        #region String-path convenience factories
+
+        /// <summary>
+        /// Opens a preexisting numpy file at the given path.
+        /// </summary>
+        public static NpyFileMemmap<T> Open(string path) => Open(new FileInfo(path));
+
+        /// <summary>
+        /// Creates a 1-D numpy file at the given path.
+        /// </summary>
+        public static NpyFileMemmap<T> Create(string path, long shape, bool isLittleEndian = true, bool isFortranOrder = false, bool overwrite = true)
+            => Create(new FileInfo(path), shape, isLittleEndian, isFortranOrder, overwrite);
+
+        /// <summary>
+        /// Creates an N-D numpy file at the given path.
+        /// </summary>
+        public static NpyFileMemmap<T> Create(string path, int[] shape, bool isLittleEndian = true, bool isFortranOrder = false, bool overwrite = true)
+            => Create(new FileInfo(path), shape, isLittleEndian, isFortranOrder, overwrite);
+
+        #endregion String-path convenience factories
 
         /// <summary>
         /// Flush the sample buffer in this class to file
@@ -1151,27 +1198,40 @@ namespace DotNetNpyIo
 
         #region Disposable
 
-        new void Dispose(bool disposing)
+        /// <summary>
+        /// Guards the single <see cref="SafeMemoryMappedViewHandle.ReleasePointer"/> that must
+        /// balance the <see cref="SafeMemoryMappedViewHandle.AcquirePointer"/> done in the ctor.
+        /// </summary>
+        private bool _pointerReleased = false;
+
+        private void ReleasePointerOnce()
         {
-            if (disposed) return;
+            if (_pointerReleased) return;
+            _pointerReleased = true;
             stream.SafeMemoryMappedViewHandle.ReleasePointer();
-            if (disposing)
-            {
-                stream.Dispose();
-                memoryMappedFile.Dispose();
-            }
-            disposed = true;
         }
 
         ~NpyFileMemmap()
         {
+            // Finalizer path: only release the acquired pointer; managed handles
+            // (stream/memoryMappedFile) will be cleaned up by their own finalizers.
             Dispose(false);
         }
 
         /// <inheritdoc/>
         protected override void DisposeManagedResources()
         {
-            Dispose();
+            // Release the view pointer BEFORE disposing the view stream that owns the handle.
+            ReleasePointerOnce();
+            stream.Dispose();
+            memoryMappedFile.Dispose();
+            disposed = true;
+        }
+
+        /// <inheritdoc/>
+        protected override void DisposeUnmanagedResources()
+        {
+            ReleasePointerOnce();
         }
         #endregion
         internal class NpyHeader
