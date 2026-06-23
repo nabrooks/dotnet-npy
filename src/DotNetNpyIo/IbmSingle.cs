@@ -26,11 +26,20 @@ namespace DotNetNpyIo
             if (fconv != 0)
             {
                 fmant = 0x00ffffff & fconv;
-                t = (int)((0x7f000000 & fconv) >> 22) - 130;
-                while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
-                if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
-                else if (t <= 0) fconv = 0;
-                else fconv = (int)(0x80000000 & fconv) | (t << 23) | (0x007fffff & fmant);
+                // Guard: if no mantissa bits intersect 0x00ffffff (e.g. exact powers of two such
+                // as 2.0f), the normalisation loop below would shift 0 forever. Treat as zero.
+                if (fmant == 0)
+                {
+                    fconv = 0;
+                }
+                else
+                {
+                    t = (int)((0x7f000000 & fconv) >> 22) - 130;
+                    while ((fmant & 0x00800000) == 0) { --t; fmant <<= 1; }
+                    if (t > 254) fconv = (int)((0x80000000 & fconv) | 0x7f7fffff);
+                    else if (t <= 0) fconv = 0;
+                    else fconv = (int)(0x80000000 & fconv) | (t << 23) | (0x007fffff & fmant);
+                }
             }
             m_value = *(float*)&fconv;
         }

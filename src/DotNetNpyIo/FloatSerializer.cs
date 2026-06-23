@@ -32,7 +32,9 @@
                 float[] result = new float[objectCount];
                 for (int i = 0; i < objectCount; i++)
                 {
-                    var val = bitConverter.ToSingle(bytes, i * SizeOfT);
+                    // startIndex is a byte offset into 'bytes' (consistent with ToSingle/ToInt32);
+                    // element i begins at startIndex + i * SizeOfT.
+                    var val = bitConverter.ToSingle(bytes, startIndex + i * SizeOfT);
                     result[i] = val;
                 }
                 return result;

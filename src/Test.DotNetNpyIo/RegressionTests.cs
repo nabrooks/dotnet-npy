@@ -67,6 +67,12 @@ namespace Test.DotNetNpyIo
             Assert.True(b > a);
             Assert.True(a <= a2);
             Assert.True(a >= a2);
+
+            // 2.0f's mantissa bits don't intersect 0x00ffffff, which used to spin the ctor's
+            // normalisation loop forever. The guard makes the call return (mapped to zero) instead
+            // of hanging the process; simply reaching this line proves the loop terminates.
+            var pow2 = IbmSingle.FromIeee(2.0f);
+            Assert.True(pow2 == pow2);
         }
 
         // ---------------------------------------------------------------------------------------
