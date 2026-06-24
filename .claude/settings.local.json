@@ -48,7 +48,11 @@
       "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~BigEndian_Array_RoundTrips\")",
       "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~BigEndian_Array_RoundTrips|FullyQualifiedName~SerializationTests|FullyQualifiedName~RegressionTests\")",
       "Bash(python3 -)",
-      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~SerializationTests|FullyQualifiedName~RegressionTests|FullyQualifiedName~CreateWriteSequentialReadSequential3DInt32\")"
+      "Bash(DOTNET_ROLL_FORWARD=LatestMajor dotnet test Test.DotNetNpyIo/Test.DotNetNpyIo.csproj -c Release --no-build --filter \"FullyQualifiedName~SerializationTests|FullyQualifiedName~RegressionTests|FullyQualifiedName~CreateWriteSequentialReadSequential3DInt32\")",
+      "Bash(git fetch *)",
+      "Bash(git rev-list *)",
+      "Bash(git add *)",
+      "Bash(git push *)"
     ]
   }
 }
