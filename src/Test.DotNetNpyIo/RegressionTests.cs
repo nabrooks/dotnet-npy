@@ -306,5 +306,39 @@ namespace Test.DotNetNpyIo
             fi.Delete();
             Assert.False(File.Exists(fi.FullName));
         }
+
+        // ---------------------------------------------------------------------------------------
+        // Big-endian binary writer/reader array round-trip across every primitive type. This is
+        // the path where the hand-rolled byte-shuffle bugs lived (e.g. Write(double[]) overrun);
+        // it locks behaviour while those loops are replaced with BinaryPrimitives.
+        // ---------------------------------------------------------------------------------------
+        [Fact]
+        public void BigEndian_Array_RoundTrips_AllPrimitiveTypes()
+        {
+            var i16 = new short[] { -5, 0, 1, short.MaxValue, short.MinValue };
+            var u16 = new ushort[] { 0, 1, 1000, ushort.MaxValue };
+            var i32 = new int[] { -5, 0, 1, int.MaxValue, int.MinValue };
+            var u32 = new uint[] { 0, 1, 1000, uint.MaxValue };
+            var i64 = new long[] { -5, 0, 1, long.MaxValue, long.MinValue };
+            var u64 = new ulong[] { 0, 1, 1000, ulong.MaxValue };
+            var f32 = new float[] { -1.5f, 0f, 3.25f, float.MaxValue, float.MinValue };
+            var f64 = new double[] { -1.5, 0, 3.25, double.MaxValue, double.MinValue };
+
+            using var ms = new MemoryStream();
+            var w = new BigEndianBinaryWriter(ms);
+            w.Write(i16); w.Write(u16); w.Write(i32); w.Write(u32);
+            w.Write(i64); w.Write(u64); w.Write(f32); w.Write(f64);
+
+            ms.Position = 0;
+            var r = new BigEndianBinaryReader(ms);
+            Assert.Equal(i16, r.ReadInt16s(i16.Length));
+            Assert.Equal(u16, r.ReadUInt16s(u16.Length));
+            Assert.Equal(i32, r.ReadInt32s(i32.Length));
+            Assert.Equal(u32, r.ReadUInt32s(u32.Length));
+            Assert.Equal(i64, r.ReadInt64s(i64.Length));
+            Assert.Equal(u64, r.ReadUInt64s(u64.Length));
+            Assert.Equal(f32, r.ReadSingles(f32.Length));
+            Assert.Equal(f64, r.ReadDoubles(f64.Length));
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Buffers.Binary;
+using System.Text;
 
 namespace DotNetNpyIo
 {
@@ -587,23 +588,17 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe double[] ReadDoubles(int count)
+        public double[] ReadDoubles(int count)
         {
             if (count < 0) throw new ArgumentOutOfRangeException($"count: {count}");
             if (count == 0) return new double[0];
 
-            BaseStream.Read(buffer, 0, count * 8);
-            fixed (byte* bptr = buffer)
-            {
-                double[] copy = new double[count];
-                for (int i = 0; i < count; i++)
-                {
-                    ulong fconv = ((ulong*)bptr)[i];
-                    fconv = EndianUtilities.Swap(fconv);
-                    copy[i] = *((double*)&fconv);
-                }
-                return copy;
-            }
+            BaseStream.ReadExactly(buffer, 0, count * 8);
+            var span = buffer.AsSpan(0, count * 8);
+            double[] copy = new double[count];
+            for (int i = 0; i < count; i++)
+                copy[i] = BinaryPrimitives.ReadDoubleBigEndian(span.Slice(i * 8));
+            return copy;
         }
 
         public double ReadIbmDouble()
@@ -654,20 +649,14 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe short[] ReadInt16s(int count)
+        public short[] ReadInt16s(int count)
         {
+            BaseStream.ReadExactly(buffer, 0, count * 2);
+            var span = buffer.AsSpan(0, count * 2);
             short[] result = new short[count];
-            BaseStream.Read(buffer, 0, count * 2);
-            fixed (byte* pBuffer = buffer)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    ushort fconv = ((ushort*)pBuffer)[i];
-                    fconv = EndianUtilities.Swap(fconv);
-                    result[i] = *((short*)&fconv);
-                }
-                return result;
-            }
+            for (int i = 0; i < count; i++)
+                result[i] = BinaryPrimitives.ReadInt16BigEndian(span.Slice(i * 2));
+            return result;
         }
 
         public unsafe override int ReadInt32()
@@ -681,19 +670,14 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe int[] ReadInt32s(int count)
+        public int[] ReadInt32s(int count)
         {
-            BaseStream.Read(buffer, 0, count * 4);
-            fixed (byte* bptr = buffer)
-            {
-                int[] copy = new int[count];
-                for (int i = 0; i < count; i++)
-                {
-                    int fconv = ((int*)bptr)[i];
-                    copy[i] = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);   // reordering bytes to accomodate big endian initial encoding. (WAAAY faster than array indexing to reorder)
-                }
-                return copy;
-            }
+            BaseStream.ReadExactly(buffer, 0, count * 4);
+            var span = buffer.AsSpan(0, count * 4);
+            int[] copy = new int[count];
+            for (int i = 0; i < count; i++)
+                copy[i] = BinaryPrimitives.ReadInt32BigEndian(span.Slice(i * 4));
+            return copy;
         }
 
         public unsafe override long ReadInt64()
@@ -706,19 +690,14 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe long[] ReadInt64s(int count)
+        public long[] ReadInt64s(int count)
         {
+            BaseStream.ReadExactly(buffer, 0, count * 8);
+            var span = buffer.AsSpan(0, count * 8);
             long[] result = new long[count];
-            BaseStream.Read(buffer, 0, count * 8);
-            fixed (byte* pBuffer = buffer)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    long fconv = ((long*)pBuffer)[i];
-                    result[i] = EndianUtilities.Swap(fconv);
-                }
-                return result;
-            }
+            for (int i = 0; i < count; i++)
+                result[i] = BinaryPrimitives.ReadInt64BigEndian(span.Slice(i * 8));
+            return result;
         }
 
         public unsafe sbyte[] ReadSBytes(int count)
@@ -777,23 +756,17 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe float[] ReadSingles(int count)
+        public float[] ReadSingles(int count)
         {
             if (count < 0) throw new ArgumentOutOfRangeException($"count: {count}");
             if (count == 0) return new float[0];
 
-            BaseStream.Read(buffer, 0, count * 4);
-            fixed (byte* bptr = buffer)
-            {
-                float[] copy = new float[count];
-                for (int i = 0; i < count; i++)
-                {
-                    int fconv = ((int*)bptr)[i];
-                    fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);   // reordering bytes to accomodate big endian initial encoding. (WAAAY faster than array indexing to reorder)
-                    copy[i] = *((float*)&fconv);
-                }
-                return copy;
-            }
+            BaseStream.ReadExactly(buffer, 0, count * 4);
+            var span = buffer.AsSpan(0, count * 4);
+            float[] copy = new float[count];
+            for (int i = 0; i < count; i++)
+                copy[i] = BinaryPrimitives.ReadSingleBigEndian(span.Slice(i * 4));
+            return copy;
         }
 
         public unsafe override ushort ReadUInt16()
@@ -806,20 +779,14 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe ushort[] ReadUInt16s(int count)
+        public ushort[] ReadUInt16s(int count)
         {
+            BaseStream.ReadExactly(buffer, 0, count * 2);
+            var span = buffer.AsSpan(0, count * 2);
             ushort[] result = new ushort[count];
-            BaseStream.Read(buffer, 0, count * 2);
-            fixed (byte* pBuffer = buffer)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    ushort fconv = ((ushort*)pBuffer)[i];
-                    fconv = EndianUtilities.Swap(fconv);
-                    result[i] = *&fconv;
-                }
-                return result;
-            }
+            for (int i = 0; i < count; i++)
+                result[i] = BinaryPrimitives.ReadUInt16BigEndian(span.Slice(i * 2));
+            return result;
         }
 
         public unsafe override uint ReadUInt32()
@@ -832,20 +799,14 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe uint[] ReadUInt32s(int count)
+        public uint[] ReadUInt32s(int count)
         {
+            BaseStream.ReadExactly(buffer, 0, count * 4);
+            var span = buffer.AsSpan(0, count * 4);
             uint[] result = new uint[count];
-            BaseStream.Read(buffer, 0, count * 4);
-            fixed (byte* pBuffer = buffer)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    uint fconv = ((uint*)pBuffer)[i];
-                    fconv = EndianUtilities.Swap(fconv);
-                    result[i] = *&fconv;
-                }
-                return result;
-            }
+            for (int i = 0; i < count; i++)
+                result[i] = BinaryPrimitives.ReadUInt32BigEndian(span.Slice(i * 4));
+            return result;
         }
 
         public unsafe override ulong ReadUInt64()
@@ -858,20 +819,14 @@ namespace DotNetNpyIo
             }
         }
 
-        public unsafe ulong[] ReadUInt64s(int count)
+        public ulong[] ReadUInt64s(int count)
         {
-            BaseStream.Read(buffer, 0, count * 8);
-            fixed (byte* pBuffer = buffer)
-            {
-                ulong[] result = new ulong[count];
-                for (int i = 0; i < count; i++)
-                {
-                    var value = ((ulong*)pBuffer)[i];
-                    result[i] = EndianUtilities.Swap(value);
-                    //value = (value & 0x00000000000000FFUL) << 56 | (value & 0x000000000000FF00UL) << 40 | (value & 0x0000000000FF0000UL) << 24 | (value & 0x00000000FF000000UL) << 8 | (value & 0x000000FF00000000UL) >> 8 | (value & 0x0000FF0000000000UL) >> 24 | (value & 0x00FF000000000000UL) >> 40 | (value & 0xFF00000000000000UL) >> 56;
-                }
-                return result;
-            }
+            BaseStream.ReadExactly(buffer, 0, count * 8);
+            var span = buffer.AsSpan(0, count * 8);
+            ulong[] result = new ulong[count];
+            for (int i = 0; i < count; i++)
+                result[i] = BinaryPrimitives.ReadUInt64BigEndian(span.Slice(i * 8));
+            return result;
         }
     }
 

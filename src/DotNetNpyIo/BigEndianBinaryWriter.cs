@@ -1,4 +1,6 @@
-﻿namespace DotNetNpyIo
+﻿using System.Buffers.Binary;
+
+namespace DotNetNpyIo
 {
     public class BigEndianBinaryWriter : BinaryWriter, IBinaryWriter
     {
@@ -136,158 +138,81 @@
             this.Write(values, values.Length);
         }
 
-        public unsafe void Write(ulong[] values)
+        public void Write(ulong[] values)
         {
-            var byteCount = values.Length * 8;
-            fixed (ulong* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    ulong bigEValue = EndianUtilities.Swap(p[i]);
-                    var bytes = (byte*)&bigEValue;
-                    buffer[i * 8 + 0] = bytes[0];
-                    buffer[i * 8 + 1] = bytes[1];
-                    buffer[i * 8 + 2] = bytes[2];
-                    buffer[i * 8 + 3] = bytes[3];
-                    buffer[i * 8 + 4] = bytes[4];
-                    buffer[i * 8 + 5] = bytes[5];
-                    buffer[i * 8 + 6] = bytes[6];
-                    buffer[i * 8 + 7] = bytes[7];
-                }
-            }
+            int byteCount = values.Length * 8;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteUInt64BigEndian(span.Slice(i * 8), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(uint[] values)
+        public void Write(uint[] values)
         {
-            var byteCount = values.Length * 4;
-            fixed (uint* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    uint bigEValue = EndianUtilities.Swap(p[i]);
-                    var bytes = (byte*)&bigEValue;
-                    buffer[i * 4 + 0] = bytes[0];
-                    buffer[i * 4 + 1] = bytes[1];
-                    buffer[i * 4 + 2] = bytes[2];
-                    buffer[i * 4 + 3] = bytes[3];
-                }
-            }
+            int byteCount = values.Length * 4;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteUInt32BigEndian(span.Slice(i * 4), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(ushort[] values)
+        public void Write(ushort[] values)
         {
-            var byteCount = values.Length * 2;
-            fixed (ushort* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    ushort bigEValue = EndianUtilities.Swap(p[i]);
-                    var bytes = (byte*)&bigEValue;
-                    buffer[i * 2 + 0] = bytes[0];
-                    buffer[i * 2 + 1] = bytes[1];
-                }
-            }
+            int byteCount = values.Length * 2;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteUInt16BigEndian(span.Slice(i * 2), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(short[] values)
+        public void Write(short[] values)
         {
-            var byteCount = values.Length * 2;
-            fixed (short* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    short bigEValue = EndianUtilities.Swap(p[i]);
-                    var bytes = (byte*)&bigEValue;
-                    buffer[i * 2 + 0] = bytes[0];
-                    buffer[i * 2 + 1] = bytes[1];
-                }
-            }
+            int byteCount = values.Length * 2;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteInt16BigEndian(span.Slice(i * 2), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(int[] values)
+        public void Write(int[] values)
         {
-            var byteCount = values.Length * 4;
-            fixed (int* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    int bigEValue = EndianUtilities.Swap(p[i]);
-                    var bytes = (byte*)&bigEValue;
-                    buffer[i * 4 + 0] = bytes[0];
-                    buffer[i * 4 + 1] = bytes[1];
-                    buffer[i * 4 + 2] = bytes[2];
-                    buffer[i * 4 + 3] = bytes[3];
-                }
-            }
+            int byteCount = values.Length * 4;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteInt32BigEndian(span.Slice(i * 4), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(long[] values)
+        public void Write(long[] values)
         {
-            var byteCount = values.Length * 8;
-            fixed (long* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    long bigEValue = EndianUtilities.Swap(p[i]);
-                    var bytes = (byte*)&bigEValue;
-                    buffer[i * 8 + 0] = bytes[0];
-                    buffer[i * 8 + 1] = bytes[1];
-                    buffer[i * 8 + 2] = bytes[2];
-                    buffer[i * 8 + 3] = bytes[3];
-                    buffer[i * 8 + 4] = bytes[4];
-                    buffer[i * 8 + 5] = bytes[5];
-                    buffer[i * 8 + 6] = bytes[6];
-                    buffer[i * 8 + 7] = bytes[7];
-                }
-            }
+            int byteCount = values.Length * 8;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteInt64BigEndian(span.Slice(i * 8), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(string[] values)
+        public void Write(string[] values)
         {
             foreach (var val in values)
                 base.Write(val);
         }
 
-        public unsafe void Write(Half[] values)
+        public void Write(Half[] values)
         {
-            var byteCount = values.Length * 2;
-            fixed (Half* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    short fconv = *(short*)&p[i];
-                    fconv = EndianUtilities.Swap(fconv);
-                    // fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);                // Endianess conversion
-                    byte* bytes = (byte*)&fconv;
-                    buffer[i * 2 + 0] = bytes[0];
-                    buffer[i * 2 + 1] = bytes[1];
-                }
-            }
+            int byteCount = values.Length * 2;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteHalfBigEndian(span.Slice(i * 2), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(float[] values)
+        public void Write(float[] values)
         {
-            var byteCount = values.Length * 4;
-            fixed (float* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    int fconv = *(int*)&p[i];
-                    fconv = (fconv << 24) | ((fconv >> 24) & 0xff) | ((fconv & 0xff00) << 8) | ((fconv & 0xff0000) >> 8);                // Endianess conversion
-                    byte* bytes = (byte*)&fconv;
-                    buffer[i * 4 + 0] = bytes[0];
-                    buffer[i * 4 + 1] = bytes[1];
-                    buffer[i * 4 + 2] = bytes[2];
-                    buffer[i * 4 + 3] = bytes[3];
-                }
-            }
+            int byteCount = values.Length * 4;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteSingleBigEndian(span.Slice(i * 4), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
@@ -302,26 +227,12 @@
             BaseStream.Write(buffer, 0, byteCount);
         }
 
-        public unsafe void Write(double[] values)
+        public void Write(double[] values)
         {
-            var byteCount = values.Length * 8;
-            fixed (double* p = values)
-            {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    var r = *(long*)&p[i];
-                    var bigEValue = EndianUtilities.Swap(r);
-                    byte* bytes = (byte*)&bigEValue;
-                    buffer[i * 8 + 0] = bytes[0];
-                    buffer[i * 8 + 1] = bytes[1];
-                    buffer[i * 8 + 2] = bytes[2];
-                    buffer[i * 8 + 3] = bytes[3];
-                    buffer[i * 8 + 4] = bytes[4];
-                    buffer[i * 8 + 5] = bytes[5];
-                    buffer[i * 8 + 6] = bytes[6];
-                    buffer[i * 8 + 7] = bytes[7];
-                }
-            }
+            int byteCount = values.Length * 8;
+            var span = buffer.AsSpan(0, byteCount);
+            for (int i = 0; i < values.Length; i++)
+                BinaryPrimitives.WriteDoubleBigEndian(span.Slice(i * 8), values[i]);
             BaseStream.Write(buffer, 0, byteCount);
         }
 
