@@ -59,8 +59,8 @@
 
         public void Write<T>(T[] values, int count)
         {
-            //if (count > values.Length)
-            //    throw new ArgumentException($"There arent {count} elements in the array to write to file: array length {values.Length}");
+            if (count > values.Length)
+                throw new ArgumentException($"There arent {count} elements in the array to write to file: array length {values.Length}");
 
             var tType = typeof(T);
             int byteCount = count * typeSizeMap[tType];
